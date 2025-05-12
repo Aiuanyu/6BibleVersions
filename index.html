@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>聖經閱讀</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        display: flex; /* 使用 Flexbox 來佈局 */
+        flex-direction: column; /* 垂直排列控制項和 iframe 容器 */
+      }
+      .controls-container {
+        padding: 10px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ccc;
+        flex-shrink: 0; /* 防止控制項容器在空間不足時縮小 */
+      }
+      .controls-container label {
+        margin-right: 5px;
+      }
+      .controls-container select {
+        margin-right: 15px;
+        padding: 5px;
+      }
+      .iframe-container {
+        display: flex;
+        flex-direction: row; /* 讓 iframe 水平排列 */
+        width: 100%;
+        flex-grow: 1; /* 讓 iframe 容器佔滿剩餘空間 */
+      }
+      .iframe-container iframe {
+        flex-grow: 1; /* 讓每個 iframe 平均分配寬度 */
+        height: 100%;
+        border: none; /* 移除 iframe 邊框 */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls-container">
+      <label for="book-select">書卷:</label>
+      <select id="book-select"></select>
+      <label for="chapter-select">章:</label>
+      <select id="chapter-select"></select>
+    </div>
+
+    <div class="iframe-container">
+      <iframe
+        src="https://www.bible.com/fr/bible/1806/MAT.1.TTVH?parallel=2408"
+        title="聖經版本1"
+      ></iframe>
+      <iframe
+        src="https://www.bible.com/fr/bible/3620/MAT.1.THV12HDB?parallel=3619"
+        title="聖經版本2"
+      ></iframe>
+      <iframe
+        src="https://www.bible.com/fr/bible/46/MAT.1.CUNP-%E7%A5%9E?parallel=1"
+        title="聖經版本3"
+      ></iframe>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- 聖經書卷資料 (請在這裡維護) ---
+        // code: 聖經書卷在 bible.com URL 中使用的代號 (例如 MAT, GEN)
+        // name: 在下拉選單中顯示的名稱
+        // chapters: 該書卷的總章數
+        const bibleBooksData = [
+          // 舊約 (範例，請補齊)
+          { code: 'GEN', name: '創世記 (Genesis)', chapters: 50 },
+          { code: 'EXO', name: '出埃及記 (Exodus)', chapters: 40 },
+          { code: 'LEV', name: '利未記 (Leviticus)', chapters: 27 },
+          // ... 請繼續加入其他舊約書卷
+
+          // 新約 (範例，請補齊)
+          { code: 'MAT', name: '馬太福音 (Matthew)', chapters: 28 },
+          { code: 'MRK', name: '馬可福音 (Mark)', chapters: 16 },
+          { code: 'LUK', name: '路加福音 (Luke)', chapters: 24 },
+          { code: 'JHN', name: '約翰福音 (John)', chapters: 21 },
+          { code: 'ACT', name: '使徒行傳 (Acts)', chapters: 28 },
+          { code: 'ROM', name: '羅馬書 (Romans)', chapters: 16 },
+          // ... 請繼續加入其他新約書卷
+          // 記得確認 bible.com 實際使用的書卷代號 (code)
+        ];
+        // --- 聖經書卷資料結束 ---
+
+        const bookSelect = document.getElementById('book-select');
+        const chapterSelect = document.getElementById('chapter-select');
+        const iframes = Array.from(
+          document.querySelectorAll('.iframe-container iframe')
+        );
+
+        // 正規表達式用來分析 URL
+        const urlPattern =
+          /^(https:\/\/www\.bible\.com\/(?:[a-z]{2}(?:-[A-Z]{2})?\/)?bible\/\d+\/)([A-Z0-9]+)\.(\d+)(.*)$/;
+
+        // 儲存每個 iframe 的 URL 前綴和後綴
+        const iframeConfigs = [];
+
+        function parseUrl(url) {
+          if (!url) return null;
+          const match = url.match(urlPattern);
+          if (match) {
+            return {
+              prefix: match[1],
+              book: match[2],
+              chapter: match[3],
+              suffix: match[4],
+            };
+          }
+          console.warn('無法分析 URL:', url);
+          return null;
+        }
+
+        function populateBookSelect(initialBookCode) {
+          bibleBooksData.forEach((book) => {
+            const option = document.createElement('option');
+            option.value = book.code;
+            option.textContent = book.name;
+            if (book.code === initialBookCode) {
+              option.selected = true;
+            }
+            bookSelect.appendChild(option);
+          });
+        }
+
+        function populateChapterSelect(bookCode, initialChapter) {
+          chapterSelect.innerHTML = ''; // 清空舊的章節選項
+          const bookData = bibleBooksData.find((b) => b.code === bookCode);
+          if (bookData) {
+            for (let i = 1; i <= bookData.chapters; i++) {
+              const option = document.createElement('option');
+              option.value = i;
+              option.textContent = i;
+              if (i === parseInt(initialChapter, 10)) {
+                option.selected = true;
+              }
+              chapterSelect.appendChild(option);
+            }
+          }
+        }
+
+        function updateAllIframes(bookCode, chapterNumber) {
+          if (!bookCode || !chapterNumber) return;
+
+          iframeConfigs.forEach((config) => {
+            const newSrc = `${config.prefix}${bookCode}.${chapterNumber}${config.suffix}`;
+            config.element.setAttribute('src', newSrc);
+            console.log(`更新 ${config.element.title} 到: ${newSrc}`);
+          });
+        }
+
+        // 初始化
+        let initialBook = 'MAT'; // 預設書卷
+        let initialChapter = '1'; // 預設章節
+
+        iframes.forEach((iframe, index) => {
+          const src = iframe.getAttribute('src');
+          const parsed = parseUrl(src);
+          if (parsed) {
+            iframeConfigs.push({
+              element: iframe,
+              prefix: parsed.prefix,
+              suffix: parsed.suffix,
+            });
+            if (index === 0) { // 以第一個 iframe 的初始設定為準
+              initialBook = parsed.book;
+              initialChapter = parsed.chapter;
+            }
+          } else {
+            console.error(`無法分析 iframe ${index + 1} 的初始 URL: ${src}`);
+            // 提供一個備用設定，避免 iframeConfigs[index] 未定義
+            iframeConfigs.push({
+              element: iframe,
+              prefix: `https://www.bible.com/bible/UNKNOWN_VERSION_${index + 1}/`, // 備用前綴
+              suffix: '.UNKNOWN_SUFFIX' // 備用後綴
+            });
+          }
+        });
+
+        populateBookSelect(initialBook);
+        populateChapterSelect(initialBook, initialChapter);
+        // 初始載入時，iframe 已經是正確的，所以不需要馬上呼叫 updateAllIframes
+
+        // 事件監聽
+        bookSelect.addEventListener('change', () => {
+          const selectedBook = bookSelect.value;
+          populateChapterSelect(selectedBook, '1'); // 換書卷時，預設跳到第1章
+          updateAllIframes(selectedBook, '1');
+        });
+
+        chapterSelect.addEventListener('change', () => {
+          const selectedBook = bookSelect.value;
+          const selectedChapter = chapterSelect.value;
+          updateAllIframes(selectedBook, selectedChapter);
+        });
+
+        console.log('聖經閱讀器已初始化。');
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "workbench.colorCustomizations": {
+    "[ColorCode]": {
+      "foreground": "#D4CAC4",
+      "editor.foreground": "#F7A06E",
+      "descriptionForeground": "#5E4D43",
+      "sideBar.foreground": "#D4CAC4",
+      "input.background": "#0D0808",
+      "input.foreground": "#F7A06E",
+      "quickInput.background": "#0D0808",
+      "quickInput.foreground": "#F7A06E",
+      "sideBar.background": "#1A100F",
+      "sideBar.border": "#0D0808",
+      "editor.background": "#1A100F",
+      "editorGroupHeader.tabsBackground": "#271917",
+      "activityBar.background": "#0D0808",
+      "tab.activeBackground": "#1A100F",
+      "tab.inactiveBackground": "#0D0808",
+      "terminal.background": "#0D0808",
+      "selection.background": "#D4CAC4",
+      "badge.background": "#271917",
+      "panel.background": "#271917",
+      "widget.shadow": "#301F1C",
+      "focusBorder": "#301F1C"
+    },
+    "titleBar.activeBackground": "#c2ff7c",
+    "titleBar.activeForeground": "#000000",
+    "titleBar.inactiveBackground": "#c2ff7c",
+    "titleBar.inactiveForeground": "#000000",
+    "titleBar.border": "#c2ff7c",
+    "activityBar.background": "#c2ff7c",
+    "activityBar.foreground": "#000000",
+    "statusBar.background": "#c2ff7c",
+    "statusBar.foreground": "#000000",
+    "statusBar.debuggingBackground": "#c2ff7c",
+    "statusBar.debuggingForeground": "#000000",
+    "tab.activeBorder": "#c2ff7c",
+    "iLoveWorkSpaceColors": true,
+    "iLoveWorkSpaceRandom": false
+  }
+}
