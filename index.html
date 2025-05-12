@@ -5,13 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>聖經閱讀</title>
     <style>
-      body,
       html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+      body {
         margin: 0;
         padding: 0;
         height: 100%;
         display: flex; /* 使用 Flexbox 來佈局 */
         flex-direction: column; /* 垂直排列控制項和 iframe 容器 */
+        zoom: 0.8; /* 設定頁面內容預設縮放為 80% */
+        /* 愛注意：這會將你頁面頂高所有个內容（控制項、iframe 本身）都縮小， */
+        /* 毋過 iframe 內背 bible.com 个內容文字大小係做毋得改變个。 */
+        /* 想愛縮放 iframe 內部文字，還係愛用瀏覽器本身个縮放功能。 */
       }
       .controls-container {
         padding: 10px;
@@ -69,21 +77,74 @@
         // name: 在下拉選單中顯示的名稱
         // chapters: 該書卷的總章數
         const bibleBooksData = [
-          // 舊約 (範例，請補齊)
+          // --- 舊約 (Old Testament) ---
           { code: 'GEN', name: '創世記 (Genesis)', chapters: 50 },
           { code: 'EXO', name: '出埃及記 (Exodus)', chapters: 40 },
           { code: 'LEV', name: '利未記 (Leviticus)', chapters: 27 },
-          // ... 請繼續加入其他舊約書卷
-
-          // 新約 (範例，請補齊)
+          { code: 'NUM', name: '民數記 (Numbers)', chapters: 36 },
+          { code: 'DEU', name: '申命記 (Deuteronomy)', chapters: 34 },
+          { code: 'JOS', name: '約書亞記 (Joshua)', chapters: 24 },
+          { code: 'JDG', name: '士師記 (Judges)', chapters: 21 },
+          { code: 'RUT', name: '路得記 (Ruth)', chapters: 4 },
+          { code: '1SA', name: '撒母耳記上 (1 Samuel)', chapters: 31 },
+          { code: '2SA', name: '撒母耳記下 (2 Samuel)', chapters: 24 },
+          { code: '1KI', name: '列王紀上 (1 Kings)', chapters: 22 },
+          { code: '2KI', name: '列王紀下 (2 Kings)', chapters: 25 },
+          { code: '1CH', name: '歷代志上 (1 Chronicles)', chapters: 29 },
+          { code: '2CH', name: '歷代志下 (2 Chronicles)', chapters: 36 },
+          { code: 'EZR', name: '以斯拉記 (Ezra)', chapters: 10 },
+          { code: 'NEH', name: '尼希米記 (Nehemiah)', chapters: 13 },
+          { code: 'EST', name: '以斯帖記 (Esther)', chapters: 10 },
+          { code: 'JOB', name: '約伯記 (Job)', chapters: 42 },
+          { code: 'PSA', name: '詩篇 (Psalms)', chapters: 150 },
+          { code: 'PRO', name: '箴言 (Proverbs)', chapters: 31 },
+          { code: 'ECC', name: '傳道書 (Ecclesiastes)', chapters: 12 },
+          { code: 'SNG', name: '雅歌 (Song of Solomon)', chapters: 8 },
+          { code: 'ISA', name: '以賽亞書 (Isaiah)', chapters: 66 },
+          { code: 'JER', name: '耶利米書 (Jeremiah)', chapters: 52 },
+          { code: 'LAM', name: '耶利米哀歌 (Lamentations)', chapters: 5 },
+          { code: 'EZK', name: '以西結書 (Ezekiel)', chapters: 48 },
+          { code: 'DAN', name: '但以理書 (Daniel)', chapters: 12 },
+          { code: 'HOS', name: '何西阿書 (Hosea)', chapters: 14 },
+          { code: 'JOL', name: '約珥書 (Joel)', chapters: 3 },
+          { code: 'AMO', name: '阿摩司書 (Amos)', chapters: 9 },
+          { code: 'OBA', name: '俄巴底亞書 (Obadiah)', chapters: 1 },
+          { code: 'JON', name: '約拿書 (Jonah)', chapters: 4 },
+          { code: 'MIC', name: '彌迦書 (Micah)', chapters: 7 },
+          { code: 'NAM', name: '那鴻書 (Nahum)', chapters: 3 },
+          { code: 'HAB', name: '哈巴谷書 (Habakkuk)', chapters: 3 },
+          { code: 'ZEP', name: '西番雅書 (Zephaniah)', chapters: 3 },
+          { code: 'HAG', name: '哈該書 (Haggai)', chapters: 2 },
+          { code: 'ZEC', name: '撒迦利亞書 (Zechariah)', chapters: 14 },
+          { code: 'MAL', name: '瑪拉基書 (Malachi)', chapters: 4 },
+          // --- 新約 (New Testament) ---
           { code: 'MAT', name: '馬太福音 (Matthew)', chapters: 28 },
           { code: 'MRK', name: '馬可福音 (Mark)', chapters: 16 },
           { code: 'LUK', name: '路加福音 (Luke)', chapters: 24 },
           { code: 'JHN', name: '約翰福音 (John)', chapters: 21 },
           { code: 'ACT', name: '使徒行傳 (Acts)', chapters: 28 },
           { code: 'ROM', name: '羅馬書 (Romans)', chapters: 16 },
-          // ... 請繼續加入其他新約書卷
-          // 記得確認 bible.com 實際使用的書卷代號 (code)
+          { code: '1CO', name: '哥林多前書 (1 Corinthians)', chapters: 16 },
+          { code: '2CO', name: '哥林多後書 (2 Corinthians)', chapters: 13 },
+          { code: 'GAL', name: '加拉太書 (Galatians)', chapters: 6 },
+          { code: 'EPH', name: '以弗所書 (Ephesians)', chapters: 6 },
+          { code: 'PHP', name: '腓立比書 (Philippians)', chapters: 4 },
+          { code: 'COL', name: '歌羅西書 (Colossians)', chapters: 4 },
+          { code: '1TH', name: '帖撒羅尼迦前書 (1 Thessalonians)', chapters: 5 },
+          { code: '2TH', name: '帖撒羅尼迦後書 (2 Thessalonians)', chapters: 3 },
+          { code: '1TI', name: '提摩太前書 (1 Timothy)', chapters: 6 },
+          { code: '2TI', name: '提摩太後書 (2 Timothy)', chapters: 4 },
+          { code: 'TIT', name: '提多書 (Titus)', chapters: 3 },
+          { code: 'PHM', name: '腓利門書 (Philemon)', chapters: 1 },
+          { code: 'HEB', name: '希伯來書 (Hebrews)', chapters: 13 },
+          { code: 'JAS', name: '雅各書 (James)', chapters: 5 },
+          { code: '1PE', name: '彼得前書 (1 Peter)', chapters: 5 },
+          { code: '2PE', name: '彼得後書 (2 Peter)', chapters: 3 },
+          { code: '1JN', name: '約翰壹書 (1 John)', chapters: 5 },
+          { code: '2JN', name: '約翰貳書 (2 John)', chapters: 1 },
+          { code: '3JN', name: '約翰參書 (3 John)', chapters: 1 },
+          { code: 'JUD', name: '猶大書 (Jude)', chapters: 1 },
+          { code: 'REV', name: '啟示錄 (Revelation)', chapters: 22 }
         ];
         // --- 聖經書卷資料結束 ---
 
@@ -200,6 +261,13 @@
 
         console.log('聖經閱讀器已初始化。');
       });
+
+      // 小修正：約翰貳書的英文名稱
+      // 在 bibleBooksData 陣列中，將：
+      // { code: '2JN', name: '約翰貳書 (1 John)', chapters: 1 },
+      // 修改為：
+      // { code: '2JN', name: '約翰貳書 (2 John)', chapters: 1 },
+      // 上面的 diff 已經包含了這個修正。
     </script>
   </body>
 </html>

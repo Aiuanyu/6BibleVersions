@@ -1,0 +1,26 @@
+/* 這係針對 bible.com 个 userstyle CSS */
+
+/* 一般个樣式 */
+body {
+  /* 你平常想愛用在 bible.com 个樣式 */
+}
+
+/* 只在 bible.com 係 iframe 載入時正套用个樣式 */
+/* (這需要搭配 JavaScript 在 bible.com 的 html 標籤上加入 is-in-iframe class) */
+html.is-in-iframe {
+  overflow: hidden !important; /* 防止因 body 放大再縮小可能產生个捲軸 */
+}
+
+html.is-in-iframe body {
+  /* 先將 body 放大到 100% / 0.8 = 125% 大小 */
+  width: calc(100% / 0.8) !important;
+  height: calc(100% / 0.8) !important; /* 或者用 min-height，看實際需求 */
+  /* 然後將放大後个 body (連同內容) 縮小回 80% */
+  transform: scale(0.8) !important;
+  transform-origin: top left !important; /* 設定縮放个基準點在左上角 */
+}
+
+/* 強制顯示並列對照區塊 */
+html.is-in-iframe .hidden.md\:block {
+  display: block !important;
+}
