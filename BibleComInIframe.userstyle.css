@@ -29,7 +29,7 @@ html.is-in-iframe {
   }
 
   .vid2408 {
-    font-size: 80%;
+    font-size: 81%;
   }
 
   .vid3619 {
@@ -37,7 +37,7 @@ html.is-in-iframe {
   }
 
   .vid1 {
-    font-size: 73%;
+    font-size: 80%;
   }
 
   .ChapterContent_p__dVKHb * {
@@ -54,4 +54,28 @@ html.is-in-iframe {
 
 .w-\[90vw\].flex.sticky.bottom-\[30\%\].z-1.justify-between.pointer-events-none.mx-auto.max-w-\[1300px\] {
   display: none;
+}
+
+.ChapterContent_reader__Dt27r h1 {
+  font-family: "Chiayi City Font", sans-serif;
+}
+
+.ChapterContent_heading__xBDcs {
+  font-family: 'jf金萱那堤2.0', sans-serif;
+}
+
+/* 同官方頁頂、頁尾介面囥起來 */
+header,
+/* .flex.justify-center.sticky.top-\[72px\].md\:top-\[80px\].w-full.z-docked.bg-white.border.border-b-small.border-gray-15, */
+nav,
+.flex-col.md\:w-\[480px\].sm\:w-\[100\%\].-translate-x-\[50\%\].fixed.sm\:bottom-6.lg\:bottom-0.p-3.bg-white.rounded-t-2.shadow-light-2.space-y-1.transition.visible\:-translate-y-10.translate-y-\[100\%\] {
+  display: none !important;
+}
+
+main {
+  margin-block-start: unset !important;
+}
+
+.top-\[72px\] {
+  top: 0 !important;
 }

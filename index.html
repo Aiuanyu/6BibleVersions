@@ -34,6 +34,10 @@
         margin-right: 15px;
         padding: 5px;
       }
+      .controls-container button {
+        padding: 5px 10px;
+        margin-left: 5px;
+      }
       .iframe-container {
         display: flex;
         flex-direction: row; /* 讓 iframe 水平排列 */
@@ -53,6 +57,8 @@
       <select id="book-select"></select>
       <label for="chapter-select">章:</label>
       <select id="chapter-select"></select>
+      <button id="prev-chapter-btn">上一章</button>
+      <button id="next-chapter-btn">下一章</button>
     </div>
 
     <div class="iframe-container">
@@ -150,6 +156,8 @@
 
         const bookSelect = document.getElementById('book-select');
         const chapterSelect = document.getElementById('chapter-select');
+        const prevChapterButton = document.getElementById('prev-chapter-btn');
+        const nextChapterButton = document.getElementById('next-chapter-btn');
         const iframes = Array.from(
           document.querySelectorAll('.iframe-container iframe')
         );
@@ -188,10 +196,11 @@
           });
         }
 
-        function populateChapterSelect(bookCode, initialChapter) {
+        function populateChapterOptions(bookCode, selectedChapterValue) {
           chapterSelect.innerHTML = ''; // 清空舊的章節選項
           const bookData = bibleBooksData.find((b) => b.code === bookCode);
           if (bookData) {
+            const targetChapter = parseInt(selectedChapterValue, 10);
             for (let i = 1; i <= bookData.chapters; i++) {
               const option = document.createElement('option');
               option.value = i;
@@ -201,6 +210,7 @@
               }
               chapterSelect.appendChild(option);
             }
+            chapterSelect.value = targetChapter; // 確保 select 的值被設定
           }
         }
 
@@ -212,6 +222,39 @@
             config.element.setAttribute('src', newSrc);
             console.log(`更新 ${config.element.title} 到: ${newSrc}`);
           });
+        }
+
+        function updateNavigationButtonsState() {
+          const currentBookCode = bookSelect.value;
+          const currentChapter = parseInt(chapterSelect.value, 10);
+          const currentBookIndex = bibleBooksData.findIndex(b => b.code === currentBookCode);
+
+          if (currentBookIndex === -1) { // 書卷資料未找到
+            prevChapterButton.disabled = true;
+            nextChapterButton.disabled = true;
+            return;
+          }
+          const currentBookData = bibleBooksData[currentBookIndex];
+
+          prevChapterButton.disabled = (currentBookIndex === 0 && currentChapter === 1);
+          nextChapterButton.disabled = (currentBookIndex === bibleBooksData.length - 1 && currentChapter === currentBookData.chapters);
+        }
+
+        function navigateTo(bookCode, chapterNumber) {
+          const targetChapter = parseInt(chapterNumber, 10);
+          const currentBookInSelect = bookSelect.value;
+
+          if (currentBookInSelect !== bookCode) {
+            bookSelect.value = bookCode; // 更新書卷下拉選單
+            populateChapterOptions(bookCode, targetChapter); // 為新書卷填入章節選項並選定章節
+          } else {
+            // 書卷無變，只更新章節（假使有變）
+            if (parseInt(chapterSelect.value, 10) !== targetChapter) {
+              chapterSelect.value = targetChapter;
+            }
+          }
+          updateAllIframes(bookCode, targetChapter);
+          updateNavigationButtonsState();
         }
 
         // 初始化
@@ -243,20 +286,58 @@
         });
 
         populateBookSelect(initialBook);
-        populateChapterSelect(initialBook, initialChapter);
+        populateChapterOptions(initialBook, initialChapter); // 使用新函數名並設定章節
         // 初始載入時，iframe 已經是正確的，所以不需要馬上呼叫 updateAllIframes
+        updateNavigationButtonsState(); // 初始化撳鈕狀態
 
         // 事件監聽
         bookSelect.addEventListener('change', () => {
-          const selectedBook = bookSelect.value;
-          populateChapterSelect(selectedBook, '1'); // 換書卷時，預設跳到第1章
-          updateAllIframes(selectedBook, '1');
+          navigateTo(bookSelect.value, '1'); // 書卷改變時，導覽到新書卷个第1章
         });
 
         chapterSelect.addEventListener('change', () => {
-          const selectedBook = bookSelect.value;
-          const selectedChapter = chapterSelect.value;
-          updateAllIframes(selectedBook, selectedChapter);
+          navigateTo(bookSelect.value, chapterSelect.value); // 章節改變時，導覽到新章節
+        });
+
+        prevChapterButton.addEventListener('click', () => {
+          const currentBookCode = bookSelect.value;
+          let currentChapter = parseInt(chapterSelect.value, 10);
+          const currentBookIndex = bibleBooksData.findIndex(b => b.code === currentBookCode);
+
+          let newBookCode = currentBookCode;
+          let newChapter = currentChapter - 1;
+
+          if (newChapter < 1) { // 需要跳到前一本書
+            if (currentBookIndex > 0) { // 毋係第一本書
+              const prevBook = bibleBooksData[currentBookIndex - 1];
+              newBookCode = prevBook.code;
+              newChapter = prevBook.chapters; // 跳到前一本書个最後一章
+            } else {
+              return; // 已經係聖經第一章，做麼个都無用
+            }
+          }
+          navigateTo(newBookCode, newChapter);
+        });
+
+        nextChapterButton.addEventListener('click', () => {
+          const currentBookCode = bookSelect.value;
+          let currentChapter = parseInt(chapterSelect.value, 10);
+          const currentBookIndex = bibleBooksData.findIndex(b => b.code === currentBookCode);
+          const currentBookData = bibleBooksData[currentBookIndex];
+
+          let newBookCode = currentBookCode;
+          let newChapter = currentChapter + 1;
+
+          if (newChapter > currentBookData.chapters) { // 需要跳到下一本書
+            if (currentBookIndex < bibleBooksData.length - 1) { // 毋係最後一本書
+              const nextBook = bibleBooksData[currentBookIndex + 1];
+              newBookCode = nextBook.code;
+              newChapter = 1; // 跳到下一本書个第1章
+            } else {
+              return; // 已經係聖經最後一章，做麼个都無用
+            }
+          }
+          navigateTo(newBookCode, newChapter);
         });
 
         console.log('聖經閱讀器已初始化。');
