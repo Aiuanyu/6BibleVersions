@@ -1,12 +1,10 @@
-/* 這係針對 bible.com 个 userstyle CSS */
-
-/* 一般个樣式 */
-body {
-  /* 你平常想愛用在 bible.com 个樣式 */
-}
+/*html.is-in-iframe .ChapterContent_reader__Dt27r > div {
+	font-size: 28px !important;
+}*/
 
 /* 只在 bible.com 係 iframe 載入時正套用个樣式 */
 /* (這需要搭配 JavaScript 在 bible.com 的 html 標籤上加入 is-in-iframe class) */
+
 
 /* --- 強制並列聖經顯示 --- */
 
@@ -20,4 +18,40 @@ html.is-in-iframe div.grid.grid-cols-1.md\:grid-cols-2 {
 /* 這條規則選擇有 hidden 同 md:block class 个元素 (通常係第二欄) */
 html.is-in-iframe .hidden.md\:block {
   display: block !important;
+}
+
+html.is-in-iframe {
+
+  .vid2408,
+  .vid3619,
+  .vid1 {
+    line-height: 20px !important;
+  }
+
+  .vid2408 {
+    font-size: 80%;
+  }
+
+  .vid3619 {
+    font-size: 85%;
+  }
+
+  .vid1 {
+    font-size: 73%;
+  }
+
+  .ChapterContent_p__dVKHb * {
+    line-height: 1.8em;
+  }
+
+  .ChapterContent_note__YlDW0::before {
+    background-size: 1em;
+    height: 1em;
+    width: 1em;
+    margin: 0.1em;
+  }
+}
+
+.w-\[90vw\].flex.sticky.bottom-\[30\%\].z-1.justify-between.pointer-events-none.mx-auto.max-w-\[1300px\] {
+  display: none;
 }
