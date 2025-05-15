@@ -3,7 +3,7 @@
 // @namespace   Violentmonkey Scripts
 // @match       https://www.bible.com/*
 // @grant       none
-// @version     1.5
+// @version     1.6
 // @author      Aiuanyu x Gemini
 // @description Adds a class to html if bible.com is in an iframe. Adjusts font size of parallel versions to fit the left column.
 // @description:zh-TW 當 bible.com 在 iframe 裡時，給 <html> 加個 class。調整並列版本个字體大小，讓佇左邊个欄位內看起來較好。
@@ -96,42 +96,60 @@
             // 使用 requestAnimationFrame 來確保 DOM 操作和測量是在瀏覽器準備好繪製下一幀之前進行
             requestAnimationFrame(() => {
                 // 開始調整字體
-                rightVersionDiv.style.fontSize = '90%'; // 初始字體大小
+                let currentFontSize = 90; // 初始字體大小
+                rightVersionDiv.style.fontSize = currentFontSize + '%';
 
                 // 強制瀏覽器重繪以取得正確个初始高度
                 leftVersionDiv.offsetHeight;
                 rightVersionDiv.offsetHeight;
 
                 let leftHeight = leftVersionDiv.offsetHeight;
-                let rightHeight = rightVersionDiv.offsetHeight;
+                let rightHeight = rightVersionDiv.offsetHeight; // 獲取初始高度
 
+                console.log(`Initial check at ${currentFontSize}%: Right height ${rightHeight}px, Left height ${leftHeight}px`);
+
+                // 如果初始字體大小就已經讓右邊內容不比左邊長，就不用調整了
                 if (rightHeight <= leftHeight) {
-                    console.log(rightDataVidSelector + ' content in right column is fine at 90% (or already shorter/equal). Right content: ' + rightHeight + 'px, Left content: ' + leftHeight + 'px');
+                    console.log('Initial font size ' + currentFontSize + '% is sufficient or shorter.');
                     return;
                 }
 
-                let lastKnownTallerFontSize = 90;
+                // 如果初始字體大小讓右邊內容比左邊長，就開始縮小字體
+                // 預設使用最小个測試字體 (50%)，假使所有測試過个字體都還係分右邊太長。
+                let bestFitFontSize = 50;
+                let foundOptimalAdjustment = false;
 
-                for (let testSize = 89; testSize >= 50; testSize--) { // 最細到 50%
+                for (let testSize = currentFontSize - 1; testSize >= 50; testSize--) { // 從比初始值小1%開始，最細到 50%
                     rightVersionDiv.style.fontSize = testSize + '%';
-                    // 每次改變字體大小後，重新獲取高度
-                    // 這裡的 rightVersionDiv.offsetHeight 會強制 reflow
-                    rightHeight = rightVersionDiv.offsetHeight;
-                    // leftHeight 在這個循環中假定不變，因為我們只調整右邊的字體
+                    rightHeight = rightVersionDiv.offsetHeight; // 每次改變字體大小後，重新獲取高度 (強制 reflow)
 
                     if (rightHeight > leftHeight) {
-                        lastKnownTallerFontSize = testSize;
+                        // 這隻 testSize 還係分右邊太長，繼續試較細个字體。
+                        // 假使這係迴圈最後一次 (testSize == 50) 而且還係太長，
+                        // bestFitFontSize 會維持在 50%。
                     } else {
-                        // 右邊內容開始比左邊短，或者一樣高了，就用上一個較大的字體大小
-                        rightVersionDiv.style.fontSize = lastKnownTallerFontSize + '%';
-                        console.log('Adjusted ' + rightDataVidSelector + ' font size to ' + lastKnownTallerFontSize + '%. Right content: ' + rightVersionDiv.offsetHeight + 'px, Left content: ' + leftHeight + 'px');
-                        return;
+                        // 這隻 testSize 分右邊內容變到毋比左邊長了 (<=)。
+                        // 照你个要求，𠊎等愛用前一隻字體大細 (testSize + 1)，
+                        // 因為該隻字體大細會分右邊「略略仔長過左邊」。
+                        bestFitFontSize = testSize + 1;
+                        foundOptimalAdjustment = true;
+                        console.log(`Right content became shorter/equal at ${testSize}% (height ${rightHeight}px). Applying previous size ${bestFitFontSize}% which was slightly taller.`);
+                        break; // 尋到臨界點了，跳出迴圈
                     }
                 }
 
-                // 如果循環結束（字體縮到最小還是右邊較長），就用最後記錄的大小
-                rightVersionDiv.style.fontSize = lastKnownTallerFontSize + '%';
-                console.log('Adjusted ' + rightDataVidSelector + ' font size to ' + lastKnownTallerFontSize + '% (min reached or still taller). Right content: ' + rightVersionDiv.offsetHeight + 'px, Left content: ' + leftHeight + 'px');
+                if (!foundOptimalAdjustment && currentFontSize > 50) {
+                    // 假使迴圈跑完，foundOptimalAdjustment 還係 false，
+                    // 表示從 (currentFontSize - 1) 到 50% 所有字體都還係分右邊太長。
+                    // 在這情況下，bestFitFontSize 已經係 50%。
+                    console.log(`All tested font sizes from ${currentFontSize - 1}% down to 50% still made right content taller. Using smallest tested size: 50%.`);
+                }
+
+                // 迴圈結束後，將字體設定為決定好个大小
+                rightVersionDiv.style.fontSize = bestFitFontSize + '%';
+                // 為著準確記錄最終狀態，重新量一次高度
+                const finalRightHeight = rightVersionDiv.offsetHeight;
+                console.log('Final adjusted font size for ' + rightDataVidSelector + ' is ' + bestFitFontSize + '%. Final Right content: ' + finalRightHeight + 'px, Left content: ' + leftHeight + 'px');
             });
         } catch (error) {
             console.error('Error during font adjustment:', error);
