@@ -1,5 +1,6 @@
 # 6BibleVersions 閱讀器
-臺灣客語、臺員話，興起發光！
+臺灣客語，䟘起來，像日頭發光！
+臺員話，起來，發光！
 4 種語言、6 個版本的聖經對照閱讀學習。
 https://aiuanyu.github.io/6BibleVersions/
 
