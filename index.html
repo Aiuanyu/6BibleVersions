@@ -197,6 +197,7 @@
         }
 
         function populateChapterOptions(bookCode, selectedChapterValue) {
+          console.log('populateChapterOptions called with bookCode:', bookCode, 'selectedChapterValue:', selectedChapterValue); // Add logging
           chapterSelect.innerHTML = ''; // 清空舊的章節選項
           const bookData = bibleBooksData.find((b) => b.code === bookCode);
           if (bookData) {
@@ -205,10 +206,14 @@
               const option = document.createElement('option');
               option.value = i;
               option.textContent = i;
-              if (i === parseInt(initialChapter, 10)) {
+              // Should select the target chapter
+              if (i === targetChapter) {
                 option.selected = true;
               }
               chapterSelect.appendChild(option);
+            }
+            if (bookData.chapters > 28) { // Add logging for books with more than 28 chapters
+                console.log(`Book ${bookCode} has ${bookData.chapters} chapters. Loop finished.`);
             }
             chapterSelect.value = targetChapter; // 確保 select 的值被設定
           }
@@ -243,16 +248,18 @@
         function navigateTo(bookCode, chapterNumber) {
           const targetChapter = parseInt(chapterNumber, 10);
           const currentBookInSelect = bookSelect.value;
+          const bookData = bibleBooksData.find((b) => b.code === bookCode); // 先找到書卷資料
 
-          if (currentBookInSelect !== bookCode) {
-            bookSelect.value = bookCode; // 更新書卷下拉選單
-            populateChapterOptions(bookCode, targetChapter); // 為新書卷填入章節選項並選定章節
-          } else {
-            // 書卷無變，只更新章節（假使有變）
-            if (parseInt(chapterSelect.value, 10) !== targetChapter) {
-              chapterSelect.value = targetChapter;
-            }
+          if (!bookData) {
+            console.error(`Book data not found for code: ${bookCode}`);
+            return; // 如果找不到書卷資料，就停止
           }
+
+          // 無論書卷有變無變，都更新書卷下拉選單並重新產生章節選項
+          if (currentBookInSelect !== bookCode) { // 只有在書卷代碼不同時才更新書卷下拉選單的值
+            bookSelect.value = bookCode; // 更新書卷下拉選單
+          }
+          populateChapterOptions(bookCode, targetChapter); // 永遠為當前選定的書卷填入章節選項並選定目標章節
           updateAllIframes(bookCode, targetChapter);
           updateNavigationButtonsState();
         }
@@ -292,6 +299,7 @@
 
         // 事件監聽
         bookSelect.addEventListener('change', () => {
+          console.log('Book select changed. New value:', bookSelect.value); // Add logging
           navigateTo(bookSelect.value, '1'); // 書卷改變時，導覽到新書卷个第1章
         });
 
