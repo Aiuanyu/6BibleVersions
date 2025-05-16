@@ -63,6 +63,14 @@
         height: 100%;
         border: none; /* 移除 iframe 邊框 */
       }
+
+      /* 為所有支援 focus 嘅互動元素加光暈樣式 */
+      button:focus,
+      select:focus,
+      input[type="range"]:focus { /* Range input 也要特別指定 */
+        outline: 2px solid purple; /* 光暈顏色和粗細 */
+        box-shadow: 0 0 8px 2px purple;
+      }
     </style>
   </head>
   <body>
@@ -438,6 +446,20 @@
         // 全域鍵盤事件監聽
         document.addEventListener('keydown', (event) => {
             const activeElement = document.activeElement;
+
+            // 處理 Esc 鍵：若互動元素有焦點，就取消焦點
+            if (event.key === 'Escape') {
+                if (activeElement &&
+                    (activeElement.tagName === 'INPUT' ||
+                     activeElement.tagName === 'SELECT' ||
+                     activeElement.tagName === 'TEXTAREA' ||
+                     activeElement.tagName === 'BUTTON')) { // 加入 BUTTON
+                    activeElement.blur();
+                    event.preventDefault(); // 防止任何瀏覽器對 Esc 鍵个預設行為
+                    return; // Esc 鍵已處理，毋使再執行後面个邏輯
+                }
+            }
+
 
             // 如果焦點在互動元素上 (input, select, textarea)
             if (activeElement &&
