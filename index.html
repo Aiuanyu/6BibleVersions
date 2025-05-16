@@ -71,6 +71,17 @@
         outline: 2px solid purple; /* 光暈顏色和粗細 */
         box-shadow: 0 0 8px 2px purple;
       }
+
+      .continue-progress-btn {
+        background-color: purple;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px; /* 加一息仔圓角 */
+        cursor: pointer;
+        margin-right: 10px; /* 和「書卷」標籤之間个距離 */
+        font-family: inherit; /* 字體和控制列一致 */
+      }
     </style>
   </head>
   <body>
@@ -110,6 +121,8 @@
     </div>
 
     <script>
+      const PROGRESS_STORAGE_KEY = 'bibleReaderProgress_v1'; // 加個版本號，避免舊格式衝突
+
       document.addEventListener('DOMContentLoaded', () => {
         // --- 聖經書卷資料 (請在這裡維護) ---
         // code: 聖經書卷在 bible.com URL 中使用的代號 (例如 MAT, GEN)
@@ -197,6 +210,8 @@
         // const lockScrollCheckbox = document.getElementById('lock-scroll-checkbox'); // 移除
         const globalScrollSlider = document.getElementById('global-scroll-slider');
 
+        const controlsContainer = document.querySelector('.controls-container');
+        let continueProgressButtonElement = null; // 用來儲存「繼續進度」按鈕个參照
 
         // 正規表達式用來分析 URL
         const urlPattern =
@@ -204,6 +219,27 @@
 
         // 儲存每個 iframe 的 URL 前綴和後綴
         const iframeConfigs = [];
+
+        function saveProgress(bookCode, chapterNumber) {
+          if (bookCode && chapterNumber) {
+            const progress = { book: bookCode, chapter: parseInt(chapterNumber, 10) };
+            localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+            console.log(`進度已儲存: ${bookCode} ${chapterNumber}`);
+          }
+        }
+
+        function loadProgress() {
+          const savedProgressRaw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+          if (savedProgressRaw) {
+            try {
+              return JSON.parse(savedProgressRaw);
+            } catch (e) {
+              console.error("讀取儲存進度錯誤:", e);
+              localStorage.removeItem(PROGRESS_STORAGE_KEY); // 清除損壞个資料
+            }
+          }
+          return null;
+        }
 
         function parseUrl(url) {
           if (!url) return null;
@@ -298,6 +334,7 @@
           populateChapterOptions(bookCode, targetChapter); // 永遠為當前選定的書卷填入章節選項並選定目標章節
           updateAllIframes(bookCode, targetChapter);
           updateNavigationButtonsState();
+          saveProgress(bookCode, targetChapter.toString()); // 儲存進度
           globalScrollSlider.value = 0; // 重設滑桿位置
         }
 
@@ -328,6 +365,36 @@
             });
           }
         });
+
+        function createAndShowContinueButton(savedBook, savedChapter) {
+          if (continueProgressButtonElement) {
+            continueProgressButtonElement.remove(); // 避免重複產生
+          }
+          continueProgressButtonElement = document.createElement('button');
+          continueProgressButtonElement.id = 'continue-progress-btn';
+          continueProgressButtonElement.className = 'continue-progress-btn';
+          continueProgressButtonElement.textContent = '繼續上擺進度';
+
+          continueProgressButtonElement.addEventListener('click', () => {
+            navigateTo(savedBook, savedChapter.toString());
+            if (continueProgressButtonElement) {
+              continueProgressButtonElement.remove();
+              continueProgressButtonElement = null;
+            }
+          });
+
+          const bookSelectLabel = controlsContainer.querySelector('label[for="book-select"]');
+          if (bookSelectLabel) {
+            controlsContainer.insertBefore(continueProgressButtonElement, bookSelectLabel);
+          } else { // 備用方案，若標籤無尋到
+            controlsContainer.insertBefore(continueProgressButtonElement, bookSelect);
+          }
+        }
+
+        const savedProgress = loadProgress();
+        if (savedProgress && savedProgress.book && savedProgress.chapter) {
+          createAndShowContinueButton(savedProgress.book, savedProgress.chapter);
+        }
 
         populateBookSelect(initialBook);
         populateChapterOptions(initialBook, initialChapter); // 使用新函數名並設定章節
