@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name        Bible.com iframe specific styles
 // @namespace   Violentmonkey Scripts
-// @match       https://www.bible.com/*
+// @match       *://www.bible.com/*
 // @grant       none
-// @version     1.6
+// @version     1.7
 // @author      Aiuanyu x Gemini
-// @description Adds a class to html if bible.com is in an iframe. Adjusts font size of parallel versions to fit the left column.
-// @description:zh-TW 當 bible.com 在 iframe 裡時，給 <html> 加個 class。調整並列版本个字體大小，讓佇左邊个欄位內看起來較好。
+// @description Adds a class to html if bible.com is in an iframe. Adjusts font size of parallel versions to fit the left column. Accepts parent scrolling messages.
+// @description:zh-TW 當 bible.com 在 iframe 裡時，給 <html> 加個 class。調整並列版本个字體大小，讓佇左邊个欄位內看起來較好。接受上層網頁共下捲動个命令。
 // ==/UserScript==
 
 (function() {
@@ -27,11 +27,41 @@
                 adjustParallelFontSize(); // 若字體載入失敗或超時，還是嘗試執行
             });
         });
+        
+        // 監聽來自父視窗 (index.html) 的訊息
+        window.addEventListener('message', function(event) {
+            // 為著安全，可以檢查訊息來源 event.origin
+            // 但因為 index.html 可能係 file:// 協定，event.origin 會係 'null'
+            // 所以，檢查 event.source 是不是 window.top 會較穩當
+            if (event.source !== window.top) {
+                // console.log('Userscript: Message ignored, not from top window.');
+                return;
+            }
+
+            if (event.data && event.data.type === 'SYNC_SCROLL_TO_PERCENTAGE') {
+                const percentage = parseFloat(event.data.percentage);
+                if (isNaN(percentage) || percentage < 0 || percentage > 1) {
+                    console.warn('Userscript: Invalid scroll percentage received:', event.data.percentage);
+                    return;
+                }
+
+                const de = document.documentElement;
+                const scrollableDistance = de.scrollHeight - de.clientHeight;
+
+                if (scrollableDistance <= 0) {
+                    // console.log('Userscript: Content is not scrollable.');
+                    return; // 內容毋使捲動
+                }
+
+                const scrollToY = scrollableDistance * percentage;
+                // console.log(`Userscript: Scrolling to ${percentage*100}%, ${scrollToY}px. Scrollable: ${scrollableDistance}, Total: ${de.scrollHeight}, Visible: ${de.clientHeight}`);
+                window.scrollTo({ top: scrollToY, behavior: 'auto' }); // 'auto' 表示立即捲動
+            }
+        });
 
     } else {
         console.log('Bible.com is top level window.');
     }
-
     function adjustParallelFontSize() {
         try {
             const params = new URLSearchParams(window.location.search);

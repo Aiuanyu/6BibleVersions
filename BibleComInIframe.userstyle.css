@@ -1,3 +1,8 @@
+@font-face {
+  font-family: 'Source Serif Pro';
+  src: local('Linux Libertine');
+}
+
 /*html.is-in-iframe .ChapterContent_reader__Dt27r > div {
 	font-size: 28px !important;
 }*/
@@ -11,7 +16,8 @@
 /* 1. 強制並列閱讀个外層容器使用雙欄格線佈局 */
 /* 這會選擇該有 grid, grid-cols-1, md:grid-cols-2 等 class 个容器 */
 html.is-in-iframe div.grid.grid-cols-1.md\:grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important; /* 強制佢變成雙欄 */
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  /* 強制佢變成雙欄 */
 }
 
 /* 2. 強制並列閱讀个第二欄顯示出來 */
@@ -28,17 +34,15 @@ html.is-in-iframe {
     line-height: 20px !important;
   }
 
-  .vid2408 {
-    font-size: 81%;
-  }
-
-  .vid3619 {
-    font-size: 85%;
-  }
-
-  .vid1 {
-    font-size: 80%;
-  }
+  /*	.vid2408 {
+		font-size: 81%;
+	}
+	.vid3619 {
+		font-size: 85%;
+	}
+	.vid1 {
+		font-size: 80%;
+	} */
 
   .ChapterContent_p__dVKHb * {
     line-height: 1.8em;
@@ -74,8 +78,17 @@ nav,
 
 main {
   margin-block-start: unset !important;
+  margin-block-end: unset !important;
 }
 
 .top-\[72px\] {
   top: 0 !important;
+}
+
+footer {
+  display: none !important;
+}
+
+.pbe-12 {
+  padding-bottom: unset !important;
 }

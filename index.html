@@ -25,10 +25,12 @@
         padding: 10px;
         background-color: #f0f0f0;
         border-bottom: 1px solid #ccc;
-        flex-shrink: 0; /* 防止控制項容器在空間不足時縮小 */
+        flex-shrink: 0;
+        display: flex; /* 讓內部元件水平排列 */
+        align-items: center; /* 垂直置中對齊內部元件 */
+        flex-wrap: wrap; /* 當空間不足時允許換行 (雖然在此佈局可能較少發生) */
       }
       .controls-container label {
-        margin-right: 5px;
       }
       .controls-container select {
         margin-right: 15px;
@@ -37,6 +39,18 @@
       .controls-container button {
         padding: 5px 10px;
         margin-left: 5px;
+      }
+      /* 更新捲動控制容器个樣式，當佢在 .controls-container 內部時 */
+      .controls-container .scroll-controls-container {
+        margin-left: auto; /* 將佢推到右邊 */
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        flex-grow: 1; /* 允許佢佔用可用空間 */
+        /* max-width: 35%; /* 毋使設定最大寬度，越闊越好用 */
+        min-width: 200px; /* 設定最小寬度，保持可用性 */
+        padding-left: 20px; /* 和左邊个按鈕保持一些距離 */
+        /* 移除原本个背景色和底部邊框，因為佢現在是 .controls-container 的一部分 */
       }
       .iframe-container {
         display: flex;
@@ -53,12 +67,23 @@
   </head>
   <body>
     <div class="controls-container">
-      <label for="book-select">書卷:</label>
+      <label for="book-select" style="margin-right: 5px;">書卷:</label>
       <select id="book-select"></select>
-      <label for="chapter-select">章:</label>
+      <label for="chapter-select" style="margin-right: 5px; margin-left: 10px;">章:</label>
       <select id="chapter-select"></select>
       <button id="prev-chapter-btn">上一章</button>
       <button id="next-chapter-btn">下一章</button>
+
+      <!-- 捲動控制項移到這裡 -->
+      <div class="scroll-controls-container">
+        <input
+          type="range"
+          id="global-scroll-slider"
+          min="0"
+          max="100"
+          value="0"
+          style="width: 100%;" />
+      </div>
     </div>
 
     <div class="iframe-container">
@@ -161,6 +186,9 @@
         const iframes = Array.from(
           document.querySelectorAll('.iframe-container iframe')
         );
+        // const lockScrollCheckbox = document.getElementById('lock-scroll-checkbox'); // 移除
+        const globalScrollSlider = document.getElementById('global-scroll-slider');
+
 
         // 正規表達式用來分析 URL
         const urlPattern =
@@ -262,6 +290,7 @@
           populateChapterOptions(bookCode, targetChapter); // 永遠為當前選定的書卷填入章節選項並選定目標章節
           updateAllIframes(bookCode, targetChapter);
           updateNavigationButtonsState();
+          globalScrollSlider.value = 0; // 重設滑桿位置
         }
 
         // 初始化
@@ -296,6 +325,7 @@
         populateChapterOptions(initialBook, initialChapter); // 使用新函數名並設定章節
         // 初始載入時，iframe 已經是正確的，所以不需要馬上呼叫 updateAllIframes
         updateNavigationButtonsState(); // 初始化撳鈕狀態
+        globalScrollSlider.value = 0; // 初始化滑桿位置
 
         // 事件監聽
         bookSelect.addEventListener('change', () => {
@@ -346,6 +376,113 @@
             }
           }
           navigateTo(newBookCode, newChapter);
+        });
+
+        globalScrollSlider.addEventListener('input', () => {
+          // 不再需要檢查 lockScrollCheckbox
+            const percentage = parseInt(globalScrollSlider.value, 10) / 100;
+            console.log(`Slider moved to ${globalScrollSlider.value}%, sending scroll command.`);
+            iframes.forEach((iframe, index) => {
+              if (iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                  type: 'SYNC_SCROLL_TO_PERCENTAGE',
+                  percentage: percentage
+                }, '*');
+              }
+            });
+        });
+
+        // 針對 globalScrollSlider 加入鍵盤控制 (↑ 和 ↓)
+        globalScrollSlider.addEventListener('keydown', (event) => {
+            let valueChanged = false;
+            if (event.key === 'ArrowUp') {
+                globalScrollSlider.value = Math.max(0, parseFloat(globalScrollSlider.value) - SCROLL_STEP_PERCENT);
+                valueChanged = true;
+            } else if (event.key === 'ArrowDown') {
+                globalScrollSlider.value = Math.min(100, parseFloat(globalScrollSlider.value) + SCROLL_STEP_PERCENT);
+                valueChanged = true;
+            }
+
+            if (valueChanged) {
+                event.preventDefault(); // 防止瀏覽器對 range input 个預設行為 (若有) 或頁面捲動
+                globalScrollSlider.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+            }
+        });
+
+        // 為捲動控制區域加入滑鼠滾輪事件監聽
+        const scrollControlsArea = document.querySelector('.controls-container .scroll-controls-container');
+        const SCROLL_STEP_PERCENT = 2; // Gemini 設計每次滾輪事件捲動 5%，GHSRobert 改 2%
+
+        if (scrollControlsArea) {
+            scrollControlsArea.addEventListener('wheel', (event) => {
+                event.preventDefault(); // 防止頁面本身或其他父元素捲動
+
+                let scrollAmountDelta = 0;
+                if (event.deltaY < 0 || event.deltaX < 0) { // 向上或向左撥
+                    scrollAmountDelta = -SCROLL_STEP_PERCENT;
+                } else if (event.deltaY > 0 || event.deltaX > 0) { // 向下或向右撥
+                    scrollAmountDelta = SCROLL_STEP_PERCENT;
+                }
+
+                if (scrollAmountDelta !== 0) {
+                    let currentValue = parseFloat(globalScrollSlider.value);
+                    let newValue = Math.max(0, Math.min(100, currentValue + scrollAmountDelta));
+                    if (newValue !== currentValue) {
+                        globalScrollSlider.value = newValue;
+                        globalScrollSlider.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                    }
+                }
+            }, { passive: false }); // passive: false 因為我們呼叫了 preventDefault
+        }
+
+        // 全域鍵盤事件監聽
+        document.addEventListener('keydown', (event) => {
+            const activeElement = document.activeElement;
+
+            // 如果焦點在互動元素上 (input, select, textarea)
+            if (activeElement &&
+                (activeElement.tagName === 'INPUT' ||
+                 activeElement.tagName === 'SELECT' ||
+                 activeElement.tagName === 'TEXTAREA')) {
+
+                if (activeElement === globalScrollSlider) {
+                    // 當 globalScrollSlider 有焦點時：
+                    // - ArrowUp/ArrowDown 由滑桿自家个 keydown listener 處理。
+                    // - ArrowLeft/ArrowRight 應該執行 range input 預設行為 (改變值並保持焦點)。
+                    // 所以，任何方向鍵按下時，全域處理器都應該返回，避免干擾。
+                    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' ||
+                        event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                        return;
+                    }
+                } else {
+                    // 焦點在其他 input/select 元素上 (例如書卷/章節下拉選單)。
+                    // 全域个方向鍵快捷操作不應該干擾這些元素个使用。
+                    if (event.key === 'ArrowUp' || event.key === 'ArrowDown' ||
+                        event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                        return;
+                    }
+                }
+            }
+
+            let sliderValueChanged = false;
+            if (event.key === 'ArrowUp') {
+                globalScrollSlider.value = Math.max(0, parseFloat(globalScrollSlider.value) - SCROLL_STEP_PERCENT);
+                sliderValueChanged = true;
+                event.preventDefault();
+            } else if (event.key === 'ArrowDown') {
+                globalScrollSlider.value = Math.min(100, parseFloat(globalScrollSlider.value) + SCROLL_STEP_PERCENT);
+                sliderValueChanged = true;
+                event.preventDefault();
+            } else if (event.key === 'ArrowLeft') {
+                prevChapterButton.click();
+                event.preventDefault();
+            } else if (event.key === 'ArrowRight') {
+                nextChapterButton.click();
+                event.preventDefault();
+            }
+            if (sliderValueChanged) {
+                globalScrollSlider.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+            }
         });
 
         console.log('聖經閱讀器已初始化。');
