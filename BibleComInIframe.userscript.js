@@ -3,7 +3,8 @@
 // @namespace   Violentmonkey Scripts
 // @match       *://www.bible.com/*
 // @grant       none
-// @version     1.8 // 改善字體大細个調整成功率
+// @version     1.8
+// 改善字體大細个調整成功率
 // @author      Aiuanyu x Gemini
 // @description Adds a class to html if bible.com is in an iframe. Adjusts font size of parallel versions to fit the left column. Accepts parent scrolling messages.
 // @description:zh-TW 當 bible.com 在 iframe 裡時，給 <html> 加個 class。調整並列版本个字體大小，讓佇左邊个欄位內看起來較好。接受上層網頁共下捲動个命令。
