@@ -3,7 +3,7 @@
 // @namespace   Violentmonkey Scripts
 // @match       *://www.bible.com/*
 // @grant       none
-// @version     1.7
+// @version     1.8 // 改善字體大細个調整成功率
 // @author      Aiuanyu x Gemini
 // @description Adds a class to html if bible.com is in an iframe. Adjusts font size of parallel versions to fit the left column. Accepts parent scrolling messages.
 // @description:zh-TW 當 bible.com 在 iframe 裡時，給 <html> 加個 class。調整並列版本个字體大小，讓佇左邊个欄位內看起來較好。接受上層網頁共下捲動个命令。
@@ -18,13 +18,19 @@
 
         // 當 iframe 內容載入完成後，嘗試調整並列版本个字體大小
         window.addEventListener('load', function () {
-            // 等待所有字體載入完成
+            // 等待所有字體載入完成 (e.g., web fonts used by bible.com itself)
             document.fonts.ready.then(function () {
-                console.log('All fonts loaded, attempting to adjust font size.');
-                adjustParallelFontSize();
+                // Add a small delay AFTER fonts are ready and page is loaded,
+                // to give bible.com's own scripts more time to render dynamic content
+                // before we start measuring heights.
+                const initialAdjustmentDelay = 1500; // 1.5 秒鐘
+                console.log(`All fonts loaded. Waiting ${initialAdjustmentDelay}ms before attempting font adjustment.`);
+                setTimeout(function() {
+                    adjustParallelFontSize();
+                }, initialAdjustmentDelay);
             }).catch(function (error) {
                 console.warn('Font loading error or timeout, proceeding with font adjustment anyway:', error);
-                adjustParallelFontSize(); // 若字體載入失敗或超時，還是嘗試執行
+                setTimeout(function() { adjustParallelFontSize(); }, 1500); // 若有錯誤，也延遲一息仔再試
             });
         });
         
@@ -62,8 +68,12 @@
     } else {
         console.log('Bible.com is top level window.');
     }
-    function adjustParallelFontSize() {
-        try {
+    function adjustParallelFontSize(retryAttempt = 0) {
+        const MAX_RETRIES = 10; // 增加重試次數
+        const RETRY_DELAY = 1200; // 每次重試之間等 1.2 秒鐘
+        const MIN_COLUMN_HEIGHT_THRESHOLD = 50; // px, 用來判斷內容敢有顯示出來个基本高度
+
+        try { // try...catch 包住整個函數个內容
             const params = new URLSearchParams(window.location.search);
             const parallelVersionId = params.get('parallel');
 
@@ -83,16 +93,9 @@
             const leftDataVidSelector = `[data-vid="${mainVersionId}"]`;
             const rightDataVidSelector = `[data-vid="${parallelVersionId}"]`;
 
-            console.log('Attempting to adjust font for right column selector:', rightDataVidSelector, 'against left column selector:', leftDataVidSelector);
-
             // 找出並列閱讀个主要容器 (根據先前个 HTML 結構)
-            // 這選擇器可能愛根據 bible.com 實際个 HTML 結構微調
-            // 你个 CSS userstyle 用 div.grid.grid-cols-1.md\:grid-cols-2，所以𠊎等也用共樣个
             const parallelContainer = document.querySelector('div.grid.md\\:grid-cols-2, div.grid.grid-cols-1.md\\:grid-cols-2');
             if (!parallelContainer) {
-                // 嘗試一個較通用个選擇器，假使上面該隻無效
-                // parallelContainer = document.querySelector('div[class*="md:grid-cols-2"]'); // 這較闊，可能愛小心
-                // if (!parallelContainer) {
                 console.log('Parallel container (e.g., div.grid.md:grid-cols-2) not found.');
                 return;
             }
@@ -106,37 +109,51 @@
             const leftColumnEl = columns[0];
             const rightColumnEl = columns[1];
 
-            // 在左欄裡肚尋找主要版本个內容元素 (使用 data-vid)
             const leftVersionDiv = leftColumnEl.querySelector(leftDataVidSelector);
-            if (!leftVersionDiv) {
-                console.log(`Content div for left version (${leftDataVidSelector}) not found in the left column.`);
-                return;
+            const rightVersionDiv = rightColumnEl.querySelector(rightDataVidSelector);
+
+            if (!leftVersionDiv || !rightVersionDiv) {
+                console.log(`Content div for left (${leftDataVidSelector}) or right (${rightDataVidSelector}) not found.`);
+                if (retryAttempt < MAX_RETRIES -1) { // 為元素搜尋保留一些重試次數
+                    console.warn(`Retrying element search in ${RETRY_DELAY}ms (Attempt ${retryAttempt + 1}/${MAX_RETRIES})`);
+                    setTimeout(() => adjustParallelFontSize(retryAttempt + 1), RETRY_DELAY);
+                } else {
+                    console.error('Element search failed after max retries for content divs. Aborting font adjustment.');
+                }
+                return; // 若元素無尋到，愛 return 避免錯誤
             }
 
-            // 在右欄裡肚尋找並列版本个內容元素 (使用 data-vid)
-            // 這也是等一下要調整字體大小的目標元素
-            const rightVersionDiv = rightColumnEl.querySelector(rightDataVidSelector);
-            if (!rightVersionDiv) {
-                console.log(`Content div for right version (${rightDataVidSelector}) not found in the right column.`);
+            // At this point, elements are found. Now check if they have rendered content.
+            // Force reflow before measurement
+            leftVersionDiv.offsetHeight;
+            rightVersionDiv.offsetHeight; // Ensure reflow before measurement
+            const currentLeftHeight = leftVersionDiv.offsetHeight;
+
+            if (currentLeftHeight < MIN_COLUMN_HEIGHT_THRESHOLD && retryAttempt < MAX_RETRIES) { // 若左欄高度無夠
+                console.warn(`Left column height (${currentLeftHeight}px) is less than threshold (${MIN_COLUMN_HEIGHT_THRESHOLD}px). Content might not be fully rendered. Retrying in ${RETRY_DELAY}ms (Attempt ${retryAttempt + 1}/${MAX_RETRIES})`);
+                setTimeout(() => adjustParallelFontSize(retryAttempt + 1), RETRY_DELAY);
                 return;
+            }
+            if (currentLeftHeight < MIN_COLUMN_HEIGHT_THRESHOLD && retryAttempt >= MAX_RETRIES) { // 重試了後還係無夠高
+                console.error(`Left column height (${currentLeftHeight}px) remains below threshold after ${MAX_RETRIES} retries. Aborting font adjustment.`);
+                return; // 放棄調整
             }
 
             console.log('Found leftVersionDiv:', leftVersionDiv, 'Found rightVersionDiv:', rightVersionDiv);
 
             // 使用 requestAnimationFrame 來確保 DOM 操作和測量是在瀏覽器準備好繪製下一幀之前進行
+            // If we reach here, elements are found and left column has some content.
             requestAnimationFrame(() => {
                 // 開始調整字體
                 let currentFontSize = 90; // 初始字體大小
                 rightVersionDiv.style.fontSize = currentFontSize + '%';
 
-                // 強制瀏覽器重繪以取得正確个初始高度
-                leftVersionDiv.offsetHeight;
-                rightVersionDiv.offsetHeight;
-
-                let leftHeight = leftVersionDiv.offsetHeight;
+                // The leftHeight from *before* rAF (currentLeftHeight) should be the reference.
+                let leftHeight = currentLeftHeight;
+                // Ensure right column also reflows with its new font size
                 let rightHeight = rightVersionDiv.offsetHeight; // 獲取初始高度
 
-                console.log(`Initial check at ${currentFontSize}%: Right height ${rightHeight}px, Left height ${leftHeight}px`);
+                console.log(`Initial check at ${currentFontSize}%: Right height ${rightHeight}px, Left height ${leftHeight}px (reference)`);
 
                 // 如果初始字體大小就已經讓右邊內容不比左邊長，就不用調整了
                 if (rightHeight <= leftHeight) {
