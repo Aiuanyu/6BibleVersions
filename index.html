@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>聖經閱讀</title>
+    <title>客 Tâi Chi 英聖經閱讀</title>
     <style>
       html {
         margin: 0;
@@ -456,7 +456,7 @@
         globalScrollSlider.addEventListener('input', () => {
           // 不再需要檢查 lockScrollCheckbox
             const percentage = parseInt(globalScrollSlider.value, 10) / 100;
-            console.log(`Slider moved to ${globalScrollSlider.value}%, sending scroll command.`);
+            // console.log(`Slider moved to ${globalScrollSlider.value}%, sending scroll command.`);
             iframes.forEach((iframe, index) => {
               if (iframe.contentWindow) {
                 iframe.contentWindow.postMessage({
