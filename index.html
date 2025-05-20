@@ -211,7 +211,8 @@
         const globalScrollSlider = document.getElementById('global-scroll-slider');
 
         const controlsContainer = document.querySelector('.controls-container');
-        let continueProgressButtonElement = null; // 用來儲存「繼續進度」按鈕个參照
+        let continueProgressButtonElement = null; 
+
 
         // 正規表達式用來分析 URL
         const urlPattern =
@@ -219,7 +220,7 @@
 
         // 儲存每個 iframe 的 URL 前綴和後綴
         const iframeConfigs = [];
-
+        
         function saveProgress(bookCode, chapterNumber) {
           if (bookCode && chapterNumber) {
             const progress = { book: bookCode, chapter: parseInt(chapterNumber, 10) };
@@ -338,10 +339,7 @@
           globalScrollSlider.value = 0; // 重設滑桿位置
         }
 
-        // 初始化
-        let initialBook = 'MAT'; // 預設書卷
-        let initialChapter = '1'; // 預設章節
-
+        // --- 初始化 iframe 設定 ---
         iframes.forEach((iframe, index) => {
           const src = iframe.getAttribute('src');
           const parsed = parseUrl(src);
@@ -350,28 +348,56 @@
               element: iframe,
               prefix: parsed.prefix,
               suffix: parsed.suffix,
+              parsed: parsed // 儲存分析結果，方便後續使用
             });
-            if (index === 0) { // 以第一個 iframe 的初始設定為準
-              initialBook = parsed.book;
-              initialChapter = parsed.chapter;
-            }
           } else {
             console.error(`無法分析 iframe ${index + 1} 的初始 URL: ${src}`);
             // 提供一個備用設定，避免 iframeConfigs[index] 未定義
             iframeConfigs.push({
               element: iframe,
               prefix: `https://www.bible.com/bible/UNKNOWN_VERSION_${index + 1}/`, // 備用前綴
-              suffix: '.UNKNOWN_SUFFIX' // 備用後綴
+              suffix: '.UNKNOWN_SUFFIX', // 備用後綴
+              parsed: null 
             });
           }
         });
 
+        // --- 決定初始書卷與章節 ---
+        let defaultInitialBook = 'MAT'; // 硬編碼个預設書卷
+        let defaultInitialChapter = '1'; // 硬編碼个預設章節
+
+        // 嘗試從第一個 iframe 取得預設值
+        if (iframeConfigs.length > 0 && iframeConfigs[0].parsed) {
+            defaultInitialBook = iframeConfigs[0].parsed.book;
+            defaultInitialChapter = iframeConfigs[0].parsed.chapter;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlBookCode = urlParams.get('book');
+        const urlChapterNumStr = urlParams.get('chapter');
+
+        let effectiveBook = defaultInitialBook;
+        let effectiveChapter = defaultInitialChapter;
+
+        if (urlBookCode && urlChapterNumStr) {
+            const bookData = bibleBooksData.find(b => b.code === urlBookCode.toUpperCase());
+            const urlChapterNum = parseInt(urlChapterNumStr, 10);
+
+            if (bookData && !isNaN(urlChapterNum) && urlChapterNum >= 1 && urlChapterNum <= bookData.chapters) {
+                effectiveBook = bookData.code;
+                effectiveChapter = urlChapterNum.toString();
+                console.log(`URL 參數指定書卷與章節: ${effectiveBook} ${effectiveChapter}`);
+            } else {
+                console.warn(`URL 參數無效或找不到書卷/章節: book=${urlBookCode}, chapter=${urlChapterNumStr}. 使用預設值: ${defaultInitialBook} ${defaultInitialChapter}`);
+            }
+        }
+
+        // --- 「繼續進度」按鈕 ---
         function createAndShowContinueButton(savedBook, savedChapter) {
           if (continueProgressButtonElement) {
             continueProgressButtonElement.remove(); // 避免重複產生
           }
           continueProgressButtonElement = document.createElement('button');
-          continueProgressButtonElement.id = 'continue-progress-btn';
           continueProgressButtonElement.className = 'continue-progress-btn';
           continueProgressButtonElement.textContent = '繼續上擺進度';
 
@@ -396,12 +422,10 @@
           createAndShowContinueButton(savedProgress.book, savedProgress.chapter);
         }
 
-        populateBookSelect(initialBook);
-        populateChapterOptions(initialBook, initialChapter); // 使用新函數名並設定章節
-        // 初始載入時，iframe 已經是正確的，所以不需要馬上呼叫 updateAllIframes
-        updateNavigationButtonsState(); // 初始化撳鈕狀態
-        globalScrollSlider.value = 0; // 初始化滑桿位置
-
+        // --- 初始化介面與導覽 ---
+        populateBookSelect(effectiveBook); // 填入書卷選項並選定有效个書卷
+        navigateTo(effectiveBook, effectiveChapter); // 導覽到有效个書卷與章節
+        
         // 事件監聽
         bookSelect.addEventListener('change', () => {
           console.log('Book select changed. New value:', bookSelect.value); // Add logging
