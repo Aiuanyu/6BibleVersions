@@ -4,7 +4,7 @@
 // @match       *://www.bible.com/*
 // @grant       none
 // @version     2.0b
-// 改善字體大細个調整成功率、增加單節頁面連結撳鈕
+// 改善字體大細个調整成功率、增加單節頁面／歸章頁面連結撳鈕
 // @author      Aiuanyu x Gemini
 // @description Adds a class to html if bible.com is in an iframe. Adjusts font size of parallel versions to fit the left column. Accepts parent scrolling messages.
 // @description:zh-TW 當 bible.com 在 iframe 裡時，給 <html> 加個 class。調整並列版本个字體大小，讓佇左邊个欄位內看起來較好。接受上層網頁共下捲動个命令。
@@ -138,106 +138,187 @@
     function addOrUpdateMultiVersionLink() {
         const url = window.location.href;
         // Regex to capture book (e.g., PSA), chapter (e.g., 18), and verse (e.g., 2)
-        // The presence of a verse number indicates a single verse page.
         const singleVerseRegex = /\/bible\/\d+\/([A-Z1-3]{3})\.(\d+)\.(\d+)/;
-        const match = url.match(singleVerseRegex);
+        // Regex for chapter page: book.chapter (potentially followed by version info, but not another verse number)
+        const chapterPageRegex = /\/bible\/\d+\/([A-Z1-3]{3})\.(\d+)/;
+
+        const singleVerseMatch = url.match(singleVerseRegex);
         const targetDivSelector = 'div.flex.flex-col.md\\:flex-row.items-center.gap-2.mbs-3';
-        const existingLink = document.getElementById(multiVersionLinkId);
+        const existingInlineLink = document.getElementById(multiVersionLinkId); // 修正變數名稱
+        const floatingButtonId = 'multi-version-chapter-float-btn'; // 新增浮動撳鈕个 ID
+        const existingFloatingButton = document.getElementById(floatingButtonId);
 
-        if (!match) {
-            // 非單節經文頁面
-            if (existingLink) {
-                console.log('非單節經文頁面，移除已存在个多版本對照連結。');
-                existingLink.remove();
+        if (singleVerseMatch) {
+            // 係單節經文頁面
+            const book = singleVerseMatch[1];
+            const chapter = singleVerseMatch[2];
+            const bookNameToDisplay = getBookDisplayName(book);
+            const targetDiv = document.querySelector(targetDivSelector);
+
+            // 移除可能存在个浮動章節連結
+            if (existingFloatingButton) {
+                console.log('單節經文頁面，移除浮動章節連結。');
+                existingFloatingButton.remove();
             }
-            return;
-        }
 
-        // 係單節經文頁面
-        const book = match[1];
-        const chapter = match[2];
-        const bookNameToDisplay = getBookDisplayName(book);
-        const targetDiv = document.querySelector(targetDivSelector);
-
-        if (!targetDiv) {
-            // console.warn('目標 <div> (' + targetDivSelector + ') 未尋到。連結暫時無法加入。'); // 可能太頻繁
-            if (existingLink) {
-                // 這情況較少見，若目標 div 毋見忒，照理講連結也應該毋在，但做為清理
-                console.log('目標 div 未尋到，移除可能殘留个連結。');
-                existingLink.remove();
+            if (!targetDiv) {
+                if (existingInlineLink) {
+                    console.log('單節經文頁面，目標 <div> 未尋到，移除可能殘留个內嵌連結。');
+                    existingInlineLink.remove();
+                }
+                return;
             }
-            return;
-        }
 
-        // 目標 div 存在
-        const expectedHref = `https://aiuanyu.github.io/6BibleVersions/?book=${book}&chapter=${chapter}`;
-        const expectedTextContent = `4 語言 6 版本對照讀 ${bookNameToDisplay} ${chapter}`;
+            const expectedHref = `https://aiuanyu.github.io/6BibleVersions/?book=${book}&chapter=${chapter}`;
+            const expectedTextContent = `4 語言 6 版本對照讀 ${bookNameToDisplay} ${chapter}`;
 
-        if (existingLink) {
-            // 連結已存在，檢查並更新
-            let updated = false;
-            if (existingLink.parentElement !== targetDiv) {
-                // console.log('連結存在但毋在正確个父元素內，重新插入。');
-                targetDiv.insertBefore(existingLink, targetDiv.firstChild); // 移到正確位置
-                updated = true;
-            }
-            if (existingLink.href !== expectedHref) {
-                existingLink.href = expectedHref;
-                // console.log(`更新連結 href: ${expectedHref}`);
-                updated = true;
-            }
-            const pElement = existingLink.querySelector('p');
-            if (pElement && pElement.textContent !== expectedTextContent) {
-                pElement.textContent = expectedTextContent;
-                // console.log(`更新連結文字: ${expectedTextContent}`);
-                updated = true;
-            }
-            if (updated) console.log(`多版本對照連結已更新: ${bookNameToDisplay} ${chapter}`);
-            return;
-        }
-
-        // 連結毋存在，建立並加入
-        // console.log(`準備為 ${bookNameToDisplay} ${chapter} 建立多版本對照連結。`);
-        const newLink = document.createElement('a');
-        newLink.className = "overflow-hidden font-bold ease-in-out duration-100 focus:outline-2 focus:outline-info-light dark:focus:outline-info-dark hover:shadow-light-2 disabled:text-gray-50 dark:disabled:bg-gray-40 dark:disabled:text-white disabled:hover:shadow-none disabled:opacity-50 disabled:bg-gray-10 disabled:cursor-not-allowed w-full max-w-fit bg-gray-15 dark:bg-gray-35 text-gray-50 dark:text-white hover:bg-gray-10 dark:hover:bg-gray-30 active:bg-gray-20 dark:active:bg-gray-40 rounded-3 text-xs pis-2 pie-3 h-6 cursor-pointer flex md:w-min items-center group static no-underline";
-        newLink.href = expectedHref;
-        newLink.target = '_blank'; // 在新分頁打開
-        newLink.rel = 'noopener noreferrer';
-        newLink.id = multiVersionLinkId; // 設定 ID
-
-        const svgString = `
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0 mie-0.5" size="24">
-                <path d="M16 3H5C3.89543 3 3 3.89543 3 5V16H5V5H16V3Z" style="--darkreader-inline-fill: currentColor;" data-darkreader-inline-fill=""></path>
-                <path d="M20 7H9C7.89543 7 7 7.89543 7 9V20C7 21.1046 7.89543 22 9 22H20C21.1046 22 22 21.1046 22 20V9C22 7.89543 21.1046 7 20 7ZM20 20H9V9H20V20Z" style="--darkreader-inline-fill: currentColor;" data-darkreader-inline-fill=""></path>
-            </svg>`;
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = svgString.trim();
-        const svgElement = tempDiv.firstChild;
-        if (svgElement) {
-            newLink.appendChild(svgElement);
-        }
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'truncate';
-        const pElement = document.createElement('p');
-        pElement.className = 'text-text-light dark:text-text-dark font-aktiv-grotesk mis-1';
-        pElement.textContent = expectedTextContent;
-        textSpan.appendChild(pElement);
-        newLink.appendChild(textSpan);
-
-        // 使用 requestAnimationFrame 來確保插入操作在瀏覽器繪製下一幀前進行
-        requestAnimationFrame(() => {
-            // 再次檢查目標 div 同連結狀態，避免在 rAF 等待期間發生變化
-            const currentTargetDiv = document.querySelector(targetDivSelector);
-            if (currentTargetDiv && !document.getElementById(multiVersionLinkId)) {
-                currentTargetDiv.insertBefore(newLink, currentTargetDiv.firstChild);
-                console.log(`已為 ${bookNameToDisplay} ${chapter} 加入「4語言6版本對照讀」連結。`);
-            } else if (!currentTargetDiv) {
-                // console.log('目標 div 在 rAF 執行前毋見忒。');
+            if (existingInlineLink) {
+                // 內嵌連結已存在，檢查並更新
+                let updated = false;
+                // 檢查係毋係在正確个位置 (第一個子元素)
+                if (existingInlineLink.parentElement !== targetDiv || existingInlineLink !== targetDiv.firstChild) {
+                    targetDiv.insertBefore(existingInlineLink, targetDiv.firstChild);
+                    updated = true;
+                }
+                if (existingInlineLink.href !== expectedHref) {
+                    existingInlineLink.href = expectedHref;
+                    updated = true;
+                }
+                const pElement = existingInlineLink.querySelector('p');
+                if (pElement && pElement.textContent !== expectedTextContent) {
+                    pElement.textContent = expectedTextContent;
+                    updated = true;
+                }
+                if (updated) console.log(`內嵌連結已更新: ${bookNameToDisplay} ${chapter}`);
             } else {
-                // console.log('連結在 rAF 執行前已經分其他程序加入。');
+                // 內嵌連結毋存在，建立並加入
+                const newLink = document.createElement('a');
+                newLink.className = "overflow-hidden font-bold ease-in-out duration-100 focus:outline-2 focus:outline-info-light dark:focus:outline-info-dark hover:shadow-light-2 disabled:text-gray-50 dark:disabled:bg-gray-40 dark:disabled:text-white disabled:hover:shadow-none disabled:opacity-50 disabled:bg-gray-10 disabled:cursor-not-allowed w-full max-w-fit bg-gray-15 dark:bg-gray-35 text-gray-50 dark:text-white hover:bg-gray-10 dark:hover:bg-gray-30 active:bg-gray-20 dark:active:bg-gray-40 rounded-3 text-xs pis-2 pie-3 h-6 cursor-pointer flex md:w-min items-center group static no-underline";
+                newLink.href = expectedHref;
+                newLink.target = '_blank';
+                newLink.rel = 'noopener noreferrer';
+                newLink.id = multiVersionLinkId;
+
+                const svgString = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0 mie-0.5" size="24">
+                        <path d="M16 3H5C3.89543 3 3 3.89543 3 5V16H5V5H16V3Z" style="--darkreader-inline-fill: currentColor;" data-darkreader-inline-fill=""></path>
+                        <path d="M20 7H9C7.89543 7 7 7.89543 7 9V20C7 21.1046 7.89543 22 9 22H20C21.1046 22 22 21.1046 22 20V9C22 7.89543 21.1046 7 20 7ZM20 20H9V9H20V20Z" style="--darkreader-inline-fill: currentColor;" data-darkreader-inline-fill=""></path>
+                    </svg>`;
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = svgString.trim();
+                const svgElement = tempDiv.firstChild;
+                if (svgElement) newLink.appendChild(svgElement);
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'truncate';
+                const pElement = document.createElement('p');
+                pElement.className = 'text-text-light dark:text-text-dark font-aktiv-grotesk mis-1';
+                pElement.textContent = expectedTextContent;
+                textSpan.appendChild(pElement);
+                newLink.appendChild(textSpan);
+
+                requestAnimationFrame(() => {
+                    const currentTargetDiv = document.querySelector(targetDivSelector);
+                    if (currentTargetDiv && !document.getElementById(multiVersionLinkId)) {
+                        currentTargetDiv.insertBefore(newLink, currentTargetDiv.firstChild);
+                        console.log(`已為 ${bookNameToDisplay} ${chapter} 加入內嵌連結。`);
+                    }
+                });
             }
-        });
+        } else {
+            // 非單節經文頁面，檢查敢係歸章个頁面
+            const chapterMatch = url.match(chapterPageRegex);
+            if (chapterMatch) {
+                // 檢查 BOOK.CHAPTER 後面个部分，確保毋係數字 (代表經節)
+                const pathPartAfterChapterMatch = url.substring(chapterMatch.index + chapterMatch[0].length);
+                const isTrueChapterPage = !pathPartAfterChapterMatch.startsWith('.') || isNaN(parseInt(pathPartAfterChapterMatch.substring(1).split('.')[0]));
+
+                if (isTrueChapterPage) {
+                    // 係歸章个頁面
+                    const book = chapterMatch[1];
+                    const chapter = chapterMatch[2];
+
+                    // 移除可能存在个內嵌連結
+                    if (existingInlineLink) {
+                        console.log('章節頁面，移除內嵌連結。');
+                        existingInlineLink.remove();
+                    }
+                    // 加入或更新浮動撳鈕
+                    addOrUpdateFloatingChapterButton(book, chapter, floatingButtonId);
+                } else {
+                    // 雖然符合 chapterPageRegex，但其實係單節經文頁面 (例如 /PSA.23.1)
+                    // 這情況照理愛由 singleVerseMatch 處理，這係一個額外个防護
+                    if (existingInlineLink) existingInlineLink.remove();
+                    if (existingFloatingButton) existingFloatingButton.remove();
+                }
+            } else {
+                // 非單節經文頁面，也非歸章个頁面 (例如首頁)
+                if (existingInlineLink) {
+                    console.log('非經文頁面，移除內嵌連結。');
+                    existingInlineLink.remove();
+                }
+                if (existingFloatingButton) {
+                    console.log('非經文頁面，移除浮動章節連結。');
+                    existingFloatingButton.remove();
+                }
+            }
+        }
+    }
+
+    function addOrUpdateFloatingChapterButton(book, chapter, buttonId) {
+        const bookNameToDisplay = getBookDisplayName(book);
+        let button = document.getElementById(buttonId);
+        const expectedHref = `https://aiuanyu.github.io/6BibleVersions/?book=${book}&chapter=${chapter}`;
+        const expectedText = "4 語 6 版"; // 撳鈕文字
+
+        if (button) {
+            // 浮動撳鈕已存在，檢查並更新
+            let updated = false;
+            if (button.href !== expectedHref) {
+                button.href = expectedHref;
+                updated = true;
+            }
+            if (button.textContent !== expectedText) {
+                button.textContent = expectedText;
+                updated = true;
+            }
+            // 檢查樣式，確保佢還係浮動个 (雖然較少機會分改忒)
+            if (button.style.position !== 'fixed') {
+                button.style.position = 'fixed';
+                updated = true;
+            }
+            if (updated) console.log(`浮動章節連結已更新: ${bookNameToDisplay} ${chapter}`);
+        } else {
+            // 浮動撳鈕毋存在，建立佢
+            button = document.createElement('a');
+            button.id = buttonId;
+            button.href = expectedHref;
+            button.textContent = expectedText;
+            button.target = '_blank';
+            button.rel = 'noopener noreferrer';
+            button.classList.add('custom-floating-bible-link'); // 加一個 class 方便未來調整
+
+            // 設定浮動樣式
+            button.style.position = 'fixed';
+            button.style.top = '80px'; // 考慮到 bible.com 本身个頂部 header
+            button.style.right = '20px';
+            button.style.zIndex = '10000'; // 確保在最上層
+            button.style.padding = '8px 12px';
+            button.style.backgroundColor = 'rgba(90, 90, 90, 0.85)'; // 深灰色半透明背景
+            button.style.color = 'white';
+            button.style.textDecoration = 'none';
+            button.style.borderRadius = '5px';
+            button.style.fontSize = '14px';
+            button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            button.style.transition = 'background-color 0.3s ease'; // 加一息仔滑鼠移過个效果
+
+            button.onmouseover = () => { button.style.backgroundColor = 'rgba(0, 0, 0, 0.9)'; };
+            button.onmouseout = () => { button.style.backgroundColor = 'rgba(90, 90, 90, 0.85)'; };
+
+
+            document.body.appendChild(button);
+            console.log(`已為 ${bookNameToDisplay} ${chapter} 加入浮動章節連結。`);
+        }
     }
 
     function adjustParallelFontSize(retryAttempt = 0) {
